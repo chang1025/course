@@ -71,7 +71,7 @@ export default function Home() {
     <Container className="mt-4">
       {/* 1. 환영 섹션 */}
       <div className="p-5 mb-4 bg-light rounded-3 shadow-sm text-center text-md-start">
-        <h1 className="display-5 fw-bold">반가워유, {userData?.userName || "학생"}님! 👋</h1>
+        <h1 className="display-5 fw-bold">반가워요, {userData?.userName || "학생"}님! 👋</h1>
         <p className="fs-4 text-muted">오늘도 알찬 대학 생활 되세요.</p>
         <div className="d-flex gap-2 justify-content-center justify-content-md-start mt-4">
           <Link to="/list">
