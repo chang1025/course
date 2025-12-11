@@ -99,8 +99,8 @@ export default function CourseList() {
   // --- 🕒 시간표 파싱 및 중복 확인 헬퍼 함수 ---
   const parseTimeSlots = (timeSlots) => {
     if (!timeSlots) return [];
-    const slots = [];
     // 예: "Mon1, Wed2" -> ["Mon-1", "Wed-2"] 형태로 변환
+    const slots = [];
     timeSlots.split(",").forEach((slot) => {
       const match = slot.trim().match(/([A-Za-z]+)(\d+)/);
       if (match) {
@@ -124,89 +124,113 @@ export default function CourseList() {
     return false; // 겹침 없음
   };
 
-  // --- 6. 강의 담기 로직 (수정됨) ---
-  const handleAddToCart = async () => {
+  // --- ✨ 공통: 저장할 강의 객체 생성 함수 ---
+  const createCourseObject = () => {
+    return {
+      uniqueId: Date.now().toString(),
+      originalId: selectedCourse.id,
+
+      professor: selectedCourse.professor,
+      courseName: selectedCourse.courseName,
+      classNumber: selectedCourse.classNumber,
+      timeSlots: selectedCourse.timeSlots,
+      classRoom: selectedCourse.classRoom,
+      credit: selectedCourse.credit,
+      gradeType: selectedCourse.gradeType,
+      pfOption: selectedCourse.pfOption,
+
+      memo: inputMemo,
+      rating: Number(inputRating),
+    };
+  };
+
+  // --- 6-A. 수강 신청 로직 (시간 겹치면 장바구니로) ---
+  const handleRegister = async () => {
     if (!selectedCourse || !currentUserId) return;
 
     try {
-      // (1) 현재 로그인한 사용자의 전체 데이터 가져오기
       const userResponse = await axios.get(`${STUDENT_API_URL}/${currentUserId}`);
       const userData = userResponse.data;
 
-      const currentRegistered = userData.registeredCourses || []; // 수강 신청된 목록
-      const currentCart = userData.shoppingCart || [];          // 장바구니 목록
+      const currentRegistered = userData.registeredCourses || [];
+      const currentCart = userData.shoppingCart || [];
 
-      // (2) 수강 신청 목록에 이미 있는지 중복 체크
-      const isRegisteredDuplicate = currentRegistered.some(
-        (item) => item.originalId === selectedCourse.id
-      );
-
-      if (isRegisteredDuplicate) {
+      // 중복 체크 (수강 목록)
+      if (currentRegistered.some(item => item.originalId === selectedCourse.id)) {
         alert("이미 수강 신청된 강의입니다.");
         setShowModal(false);
         return;
       }
 
-      // (3) 새 강의 객체 생성
-      const newCourseData = {
-        uniqueId: Date.now().toString(),
-        originalId: selectedCourse.id,
-
-        professor: selectedCourse.professor,
-        courseName: selectedCourse.courseName,
-        classNumber: selectedCourse.classNumber,
-        timeSlots: selectedCourse.timeSlots,
-        classRoom: selectedCourse.classRoom,
-        credit: selectedCourse.credit,
-        gradeType: selectedCourse.gradeType,
-        pfOption: selectedCourse.pfOption,
-
-        memo: inputMemo,
-        rating: Number(inputRating),
-      };
-
-      // (4) 시간표 중복 체크 (수강 신청된 목록과 비교)
+      const newCourseData = createCourseObject();
       const isTimeConflict = checkTimeConflict(selectedCourse, currentRegistered);
 
       if (isTimeConflict) {
-        // 🚨 시간 중복 시 -> 장바구니(shoppingCart)에 추가
-
-        // 장바구니 내 중복 체크
-        const isCartDuplicate = currentCart.some(
-          (item) => item.originalId === selectedCourse.id
-        );
-
-        if (isCartDuplicate) {
+        // 🚨 시간 중복 -> 장바구니로 자동 이동
+        if (currentCart.some(item => item.originalId === selectedCourse.id)) {
           alert("시간표가 겹쳐 장바구니에 담으려 했으나, 이미 장바구니에 존재하는 강의입니다.");
           setShowModal(false);
           return;
         }
 
-        const updatedCart = [...currentCart, newCourseData];
-
         await axios.put(`${STUDENT_API_URL}/${currentUserId}`, {
           ...userData,
-          shoppingCart: updatedCart
+          shoppingCart: [...currentCart, newCourseData]
         });
-
         alert(`[${selectedCourse.courseName}] 강의 시간이 기존 시간표와 겹쳐서 장바구니에 담겼습니다.`);
 
       } else {
-        // ✅ 시간 중복 없음 -> 수강 신청 목록(registeredCourses)에 추가
-        const updatedRegistered = [...currentRegistered, newCourseData];
-
+        // ✅ 정상 신청
         await axios.put(`${STUDENT_API_URL}/${currentUserId}`, {
           ...userData,
-          registeredCourses: updatedRegistered
+          registeredCourses: [...currentRegistered, newCourseData]
         });
-
-        alert(`[${selectedCourse.courseName}] 강의가 수강 신청되었습니다!`);
+        alert(`[${selectedCourse.courseName}] 수강 신청 완료!`);
       }
-
       setShowModal(false);
 
     } catch (error) {
-      console.error("강의 담기 실패:", error);
+      console.error("수강 신청 실패:", error);
+      alert("오류가 발생했습니다.");
+    }
+  };
+
+  // --- 6-B. 장바구니 담기 로직 (직접 담기) ---
+  const handleDirectToCart = async () => {
+    if (!selectedCourse || !currentUserId) return;
+
+    try {
+      const userResponse = await axios.get(`${STUDENT_API_URL}/${currentUserId}`);
+      const userData = userResponse.data;
+
+      const currentRegistered = userData.registeredCourses || [];
+      const currentCart = userData.shoppingCart || [];
+
+      // 중복 체크 1: 이미 수강 신청된 강의인지
+      if (currentRegistered.some(item => item.originalId === selectedCourse.id)) {
+        alert("이미 수강 신청된 강의입니다.");
+        return;
+      }
+
+      // 중복 체크 2: 이미 장바구니에 있는지
+      if (currentCart.some(item => item.originalId === selectedCourse.id)) {
+        alert("이미 장바구니에 담겨 있습니다.");
+        return;
+      }
+
+      // 장바구니에 추가
+      const newCourseData = createCourseObject();
+
+      await axios.put(`${STUDENT_API_URL}/${currentUserId}`, {
+        ...userData,
+        shoppingCart: [...currentCart, newCourseData]
+      });
+
+      alert(`[${selectedCourse.courseName}] 장바구니에 담았습니다!`);
+      setShowModal(false);
+
+    } catch (error) {
+      console.error("장바구니 담기 실패:", error);
       alert("오류가 발생했습니다.");
     }
   };
@@ -215,7 +239,6 @@ export default function CourseList() {
     <div className="container mt-4">
       <h2 className="mb-4 fw-bold">
         🎓 전체 강의 조회
-
         <div className="d-flex justify-content-end">
           <Link to="/my-courses" className="btn btn-outline-primary">내 강의목록</Link>
         </div>
@@ -303,7 +326,13 @@ export default function CourseList() {
               </div>
               <div className="modal-footer">
                 <button className="btn btn-secondary" onClick={() => setShowModal(false)}>취소</button>
-                <button className="btn btn-primary" onClick={handleAddToCart}>저장하기</button>
+                {/* ✨ 버튼 분리: 장바구니 담기 / 신청하기 */}
+                <button className="btn btn-warning text-white" onClick={handleDirectToCart}>
+                  🛒 장바구니 담기
+                </button>
+                <button className="btn btn-primary" onClick={handleRegister}>
+                  ✅ 수강 신청
+                </button>
               </div>
             </div>
           </div>
