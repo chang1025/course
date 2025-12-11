@@ -11,8 +11,6 @@ export default function CourseAdd() {
   const [studentId, setStudentId] = useState(""); // 소문자 studentId로 통일
   const navigate = useNavigate();
 
-  // src/pages/CourseAdd.js 수정
-
   const handleSignup = async (e) => {
     e.preventDefault();
 
@@ -22,12 +20,10 @@ export default function CourseAdd() {
     }
 
     try {
-      // 🔍 [변경] 1. 검색 쿼리(?studentId=) 대신 '전체 목록'을 가져옵니다.
-      // 이렇게 하면 주소 오류(404)인지 확실히 알 수 있고, 필터링 문제도 사라집니다.
+      // 1. 전체 목록을 가져와서 중복 학번 체크
       const response = await axios.get(STUDENT_API_URL);
 
-      // 🔍 [변경] 2. 가져온 전체 목록에서 학번이 같은 사람이 있는지 '직접' 찾습니다.
-      // (서버가 아니라 내 컴퓨터에서 비교하므로 훨씬 정확합니다)
+      // (서버 데이터에 대문자 ID가 섞여있을 수 있으므로 둘 다 체크)
       const existingUser = response.data.find(
         (user) => user.studentId === studentId || user.studentID === studentId
       );
@@ -38,11 +34,13 @@ export default function CourseAdd() {
         return;
       }
 
-      // 💾 3. 신규 가입 (POST) - 기존과 동일
+      // 💾 2. 신규 가입 (POST)
+      // ✨ [수정됨] DB 구조 변경에 맞춰 shoppingCart 필드 추가
       const newUser = {
         userName: userName,
         studentId: studentId,
-        registeredCourses: []
+        registeredCourses: [], // 실제 수강 신청된 강의 목록
+        shoppingCart: []       // ✨ 장바구니(예비 과목) 목록 초기화
       };
 
       await axios.post(STUDENT_API_URL, newUser);
@@ -52,7 +50,7 @@ export default function CourseAdd() {
 
     } catch (error) {
       console.error("회원가입 에러:", error);
-      // 404가 뜨면 URL 자체가 틀린 것입니다.
+      // 404가 뜨면 URL 자체가 틀린 것
       if (error.response && error.response.status === 404) {
         alert(`API 주소가 잘못되었습니다. (404 Not Found)\nURL: ${STUDENT_API_URL}\n프로젝트 ID나 리소스 이름(student)을 확인해주세요.`);
       } else {

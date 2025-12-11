@@ -96,23 +96,53 @@ export default function CourseList() {
     setShowModal(true);
   };
 
-  // --- 6. 강의 담기 로직 (로그인한 ID 사용) ---
+  // --- 🕒 시간표 파싱 및 중복 확인 헬퍼 함수 ---
+  const parseTimeSlots = (timeSlots) => {
+    if (!timeSlots) return [];
+    const slots = [];
+    // 예: "Mon1, Wed2" -> ["Mon-1", "Wed-2"] 형태로 변환
+    timeSlots.split(",").forEach((slot) => {
+      const match = slot.trim().match(/([A-Za-z]+)(\d+)/);
+      if (match) {
+        slots.push(`${match[1]}-${match[2]}`);
+      }
+    });
+    return slots;
+  };
+
+  const checkTimeConflict = (targetCourse, existingList) => {
+    if (!targetCourse.timeSlots) return false;
+
+    const targetSlots = parseTimeSlots(targetCourse.timeSlots);
+
+    for (const existing of existingList) {
+      const existingSlots = parseTimeSlots(existing.timeSlots);
+      // 교집합(겹치는 시간)이 있는지 확인
+      const hasOverlap = targetSlots.some(slot => existingSlots.includes(slot));
+      if (hasOverlap) return true; // 겹침 발생
+    }
+    return false; // 겹침 없음
+  };
+
+  // --- 6. 강의 담기 로직 (수정됨) ---
   const handleAddToCart = async () => {
     if (!selectedCourse || !currentUserId) return;
 
     try {
-      // (1) 현재 로그인한 사용자의 장바구니 데이터 가져오기
+      // (1) 현재 로그인한 사용자의 전체 데이터 가져오기
       const userResponse = await axios.get(`${STUDENT_API_URL}/${currentUserId}`);
       const userData = userResponse.data;
-      const currentCourses = userData.registeredCourses || [];
 
-      // (2) 중복 체크
-      const isDuplicate = currentCourses.some(
+      const currentRegistered = userData.registeredCourses || []; // 수강 신청된 목록
+      const currentCart = userData.shoppingCart || [];          // 장바구니 목록
+
+      // (2) 수강 신청 목록에 이미 있는지 중복 체크
+      const isRegisteredDuplicate = currentRegistered.some(
         (item) => item.originalId === selectedCourse.id
       );
 
-      if (isDuplicate) {
-        alert("이미 장바구니에 담긴 강의입니다.");
+      if (isRegisteredDuplicate) {
+        alert("이미 수강 신청된 강의입니다.");
         setShowModal(false);
         return;
       }
@@ -135,15 +165,44 @@ export default function CourseList() {
         rating: Number(inputRating),
       };
 
-      // (4) 배열 업데이트 및 저장 (PUT)
-      const updatedCourses = [...currentCourses, newCourseData];
+      // (4) 시간표 중복 체크 (수강 신청된 목록과 비교)
+      const isTimeConflict = checkTimeConflict(selectedCourse, currentRegistered);
 
-      await axios.put(`${STUDENT_API_URL}/${currentUserId}`, {
-        ...userData,
-        registeredCourses: updatedCourses
-      });
+      if (isTimeConflict) {
+        // 🚨 시간 중복 시 -> 장바구니(shoppingCart)에 추가
 
-      alert(`[${selectedCourse.courseName}] 강의가 추가되었습니다!`);
+        // 장바구니 내 중복 체크
+        const isCartDuplicate = currentCart.some(
+          (item) => item.originalId === selectedCourse.id
+        );
+
+        if (isCartDuplicate) {
+          alert("시간표가 겹쳐 장바구니에 담으려 했으나, 이미 장바구니에 존재하는 강의입니다.");
+          setShowModal(false);
+          return;
+        }
+
+        const updatedCart = [...currentCart, newCourseData];
+
+        await axios.put(`${STUDENT_API_URL}/${currentUserId}`, {
+          ...userData,
+          shoppingCart: updatedCart
+        });
+
+        alert(`[${selectedCourse.courseName}] 강의 시간이 기존 시간표와 겹쳐서 장바구니에 담겼습니다.`);
+
+      } else {
+        // ✅ 시간 중복 없음 -> 수강 신청 목록(registeredCourses)에 추가
+        const updatedRegistered = [...currentRegistered, newCourseData];
+
+        await axios.put(`${STUDENT_API_URL}/${currentUserId}`, {
+          ...userData,
+          registeredCourses: updatedRegistered
+        });
+
+        alert(`[${selectedCourse.courseName}] 강의가 수강 신청되었습니다!`);
+      }
+
       setShowModal(false);
 
     } catch (error) {
@@ -161,8 +220,6 @@ export default function CourseList() {
           <Link to="/my-courses" className="btn btn-outline-primary">내 강의목록</Link>
         </div>
       </h2>
-
-
 
       {/* 검색창 */}
       <div className="row mb-3 g-2">
