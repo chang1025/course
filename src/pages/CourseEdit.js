@@ -33,10 +33,10 @@ const parseTimeSlots = (timeSlotsStr) => {
 // 🛠️ 유틸리티: 특정 강의가 "새로 만들어지는 스케줄"과 충돌하는지 확인
 const checkConflictWithSchedule = (schedule, targetCourse) => {
   const targetSlots = parseTimeSlots(targetCourse.timeSlots);
-  
+
   return schedule.some(existing => {
     const existingSlots = parseTimeSlots(existing.timeSlots);
-    return targetSlots.some(t => 
+    return targetSlots.some(t =>
       existingSlots.some(e => e.day === t.day && e.period === t.period)
     );
   });
@@ -47,7 +47,7 @@ const checkConflict = (courseA, courseB) => {
   const slotsA = parseTimeSlots(courseA.timeSlots);
   const slotsB = parseTimeSlots(courseB.timeSlots);
 
-  return slotsA.some(a => 
+  return slotsA.some(a =>
     slotsB.some(b => a.day === b.day && a.period === b.period)
   );
 };
@@ -57,7 +57,7 @@ export default function CourseEdit() {
   const [registeredCourses, setRegisteredCourses] = useState([]);
   const [cartCourses, setCartCourses] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   // 모달 상태
   const [showModal, setShowModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState(null);
@@ -97,7 +97,7 @@ export default function CourseEdit() {
   // --- 통계 계산 ---
   const stats = useMemo(() => {
     const total = registeredCourses.reduce((sum, c) => sum + (c.credit || 0), 0);
-    const pfCount = registeredCourses.filter(c => c.gradeType === "PF" || c.pfOption === true).length;
+    const pfCount = registeredCourses.filter(c => c.gradeType === "PF").length;
     return { totalCredits: total, majorCredits: total, generalCredits: 0, pfCount: pfCount };
   }, [registeredCourses]);
 
@@ -119,11 +119,11 @@ export default function CourseEdit() {
   // --- 장바구니 -> 시간표 (교체 로직 적용) ---
   const addToTimetable = async (targetCourse) => {
     if (registeredCourses.some(c => c.originalId === targetCourse.originalId)) {
-        alert("이미 시간표에 존재하는 강의입니다.");
-        return;
+      alert("이미 시간표에 존재하는 강의입니다.");
+      return;
     }
 
-    const conflictingCourses = registeredCourses.filter(existing => 
+    const conflictingCourses = registeredCourses.filter(existing =>
       checkConflict(existing, targetCourse)
     );
 
@@ -136,50 +136,50 @@ export default function CourseEdit() {
     if (!window.confirm(confirmMsg)) return;
 
     const newRegistered = [
-      ...registeredCourses.filter(c => !conflictingCourses.includes(c)), 
+      ...registeredCourses.filter(c => !conflictingCourses.includes(c)),
       targetCourse
     ];
 
     const newCart = [
-      ...cartCourses.filter(c => c.uniqueId !== targetCourse.uniqueId), 
+      ...cartCourses.filter(c => c.uniqueId !== targetCourse.uniqueId),
       ...conflictingCourses
     ];
 
     try {
-        await axios.put(`${STUDENT_API_URL}/${userData.id}`, {
-            ...userData,
-            registeredCourses: newRegistered,
-            shoppingCart: newCart
-        });
-        fetchUserData();
+      await axios.put(`${STUDENT_API_URL}/${userData.id}`, {
+        ...userData,
+        registeredCourses: newRegistered,
+        shoppingCart: newCart
+      });
+      fetchUserData();
     } catch (e) {
-        alert("저장 실패");
+      alert("저장 실패");
     }
   };
 
   // --- 강의 삭제/이동 ---
   const handleDelete = async (targetCourse, fromWhere) => {
-      if(!window.confirm(`[${targetCourse.courseName}] 강의를 삭제하시겠습니까?`)) return;
+    if (!window.confirm(`[${targetCourse.courseName}] 강의를 삭제하시겠습니까?`)) return;
 
-      let newRegistered = registeredCourses;
-      let newCart = cartCourses;
+    let newRegistered = registeredCourses;
+    let newCart = cartCourses;
 
-      if (fromWhere === 'timetable') {
-          newRegistered = registeredCourses.filter(c => c.uniqueId !== targetCourse.uniqueId);
-      } else {
-          newCart = cartCourses.filter(c => c.uniqueId !== targetCourse.uniqueId);
-      }
+    if (fromWhere === 'timetable') {
+      newRegistered = registeredCourses.filter(c => c.uniqueId !== targetCourse.uniqueId);
+    } else {
+      newCart = cartCourses.filter(c => c.uniqueId !== targetCourse.uniqueId);
+    }
 
-      try {
-          await axios.put(`${STUDENT_API_URL}/${userData.id}`, {
-              ...userData,
-              registeredCourses: newRegistered,
-              shoppingCart: newCart
-          });
-          fetchUserData();
-      } catch (e) {
-          alert("오류가 발생했습니다.");
-      }
+    try {
+      await axios.put(`${STUDENT_API_URL}/${userData.id}`, {
+        ...userData,
+        registeredCourses: newRegistered,
+        shoppingCart: newCart
+      });
+      fetchUserData();
+    } catch (e) {
+      alert("오류가 발생했습니다.");
+    }
   };
 
   // --- 상세 정보 모달 ---
@@ -194,7 +194,7 @@ export default function CourseEdit() {
     if (!editingCourse) return;
 
     let isUpdated = false;
-    
+
     const newRegistered = registeredCourses.map(c => {
       if (c.uniqueId === editingCourse.uniqueId) {
         isUpdated = true;
@@ -214,9 +214,9 @@ export default function CourseEdit() {
     if (isUpdated) {
       try {
         await axios.put(`${STUDENT_API_URL}/${userData.id}`, {
-            ...userData,
-            registeredCourses: newRegistered,
-            shoppingCart: newCart
+          ...userData,
+          registeredCourses: newRegistered,
+          shoppingCart: newCart
         });
         alert("수정되었습니다.");
         setShowModal(false);
@@ -250,7 +250,7 @@ export default function CourseEdit() {
     shuffledCandidates.forEach(candidate => {
       // 현재 만들고 있는 newSchedule과 충돌하는지 확인
       const isConflict = checkConflictWithSchedule(newSchedule, candidate);
-      
+
       if (!isConflict) {
         // 충돌 안 하면 시간표에 등록
         newSchedule.push(candidate);
@@ -263,9 +263,9 @@ export default function CourseEdit() {
     // 4. 결과 저장
     try {
       await axios.put(`${STUDENT_API_URL}/${userData.id}`, {
-          ...userData,
-          registeredCourses: newSchedule,
-          shoppingCart: newCart
+        ...userData,
+        registeredCourses: newSchedule,
+        shoppingCart: newCart
       });
       alert(`🎲 랜덤 조합 완료!\n총 ${newSchedule.length}개의 강의가 시간표에 배치되었습니다.`);
       fetchUserData();
@@ -281,32 +281,32 @@ export default function CourseEdit() {
       {/* 상단 대시보드 */}
       <div className="row text-center mb-4 g-2">
         <div className="col-md-3">
-            <div className="border rounded p-3 bg-white shadow-sm h-100">
-                <span className="fs-2">📝</span><br/>
-                <strong>총 학점</strong><br/>
-                <span className="text-primary fw-bold fs-5">{stats.totalCredits} / 21</span>
-            </div>
-        </div>
-         <div className="col-md-3">
-            <div className="border rounded p-3 bg-white shadow-sm h-100">
-                <span className="fs-2">📘</span><br/>
-                <strong>전공</strong><br/>
-                <span className="text-info fw-bold fs-5">{stats.majorCredits}</span>
-            </div>
+          <div className="border rounded p-3 bg-white shadow-sm h-100">
+            <span className="fs-2">📝</span><br />
+            <strong>총 학점</strong><br />
+            <span className="text-primary fw-bold fs-5">{stats.totalCredits} / 21</span>
+          </div>
         </div>
         <div className="col-md-3">
-            <div className="border rounded p-3 bg-white shadow-sm h-100">
-                <span className="fs-2">📙</span><br/>
-                <strong>교양</strong><br/>
-                <span className="text-warning fw-bold fs-5">{stats.generalCredits}</span>
-            </div>
+          <div className="border rounded p-3 bg-white shadow-sm h-100">
+            <span className="fs-2">📘</span><br />
+            <strong>전공</strong><br />
+            <span className="text-info fw-bold fs-5">{stats.majorCredits}</span>
+          </div>
         </div>
         <div className="col-md-3">
-            <div className="border rounded p-3 bg-white shadow-sm h-100">
-                <span className="fs-2">✅</span><br/>
-                <strong>P/F 과목</strong><br/>
-                <span className="text-success fw-bold fs-5">{stats.pfCount} 개</span>
-            </div>
+          <div className="border rounded p-3 bg-white shadow-sm h-100">
+            <span className="fs-2">📙</span><br />
+            <strong>교양</strong><br />
+            <span className="text-warning fw-bold fs-5">{stats.generalCredits}</span>
+          </div>
+        </div>
+        <div className="col-md-3">
+          <div className="border rounded p-3 bg-white shadow-sm h-100">
+            <span className="fs-2">✅</span><br />
+            <strong>P/F 과목</strong><br />
+            <span className="text-success fw-bold fs-5">{stats.pfCount} 개</span>
+          </div>
         </div>
       </div>
 
@@ -314,9 +314,9 @@ export default function CourseEdit() {
       <div className="row">
         <div className="col-lg-12 mb-4 position-relative">
           <div className="position-absolute end-0 top-0 mb-2 me-3" style={{ zIndex: 10 }}>
-             <button className="btn btn-primary shadow-sm" onClick={handleMix}>
-                🔀 MIX
-             </button>
+            <button className="btn btn-primary shadow-sm" onClick={handleMix}>
+              🔀 MIX
+            </button>
           </div>
 
           <h4 className="fw-bold mb-3">📅 2025-1 시간표</h4>
@@ -324,7 +324,7 @@ export default function CourseEdit() {
             <table className="table table-bordered text-center mb-0" style={{ tableLayout: 'fixed', height: '600px' }}>
               <thead className="bg-light">
                 <tr>
-                  <th style={{width: '60px'}}>Time</th>
+                  <th style={{ width: '60px' }}>Time</th>
                   <th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th>
                 </tr>
               </thead>
@@ -336,9 +336,9 @@ export default function CourseEdit() {
                       const key = `${day}-${period}`;
                       const course = timetableMap[key];
                       return (
-                        <td key={key} className="p-1 align-middle" style={{height: '60px', verticalAlign: 'middle'}}>
+                        <td key={key} className="p-1 align-middle" style={{ height: '60px', verticalAlign: 'middle' }}>
                           {course && (
-                            <div 
+                            <div
                               className="rounded p-1 h-100 d-flex flex-column justify-content-center shadow-sm"
                               style={{ backgroundColor: getColor(course.courseName), fontSize: '0.8rem', cursor: 'pointer' }}
                               onClick={() => openDetailModal(course)}
@@ -362,54 +362,54 @@ export default function CourseEdit() {
       {/* 장바구니 영역 */}
       <div className="mt-4">
         <div className="d-flex justify-content-between align-items-center mb-2">
-            <h5 className="fw-bold text-muted">🛒 장바구니 (후보 강의)</h5>
-            <Link to="/list" className="btn btn-sm btn-outline-primary">+ 강의 검색하러 가기</Link>
+          <h5 className="fw-bold text-muted">🛒 장바구니 (후보 강의)</h5>
+          <Link to="/list" className="btn btn-sm btn-outline-primary">+ 강의 검색하러 가기</Link>
         </div>
-        
+
         <div className="card bg-light border-0 shadow-sm p-3">
-            {cartCourses.length === 0 ? (
-                <p className="text-center text-muted m-0">장바구니가 비어있습니다.</p>
-            ) : (
-                <div className="d-flex flex-wrap gap-3">
-                    {cartCourses.map(course => (
-                        <div key={course.uniqueId} className="card border-0 shadow-sm" style={{ width: '250px' }}>
-                            <div 
-                                className="card-body p-3" 
-                                style={{cursor: "pointer"}} 
-                                onClick={(e) => {
-                                    if(e.target.tagName !== "BUTTON") openDetailModal(course);
-                                }}
-                            >
-                                <h6 className="card-title fw-bold text-truncate">{course.courseName}</h6>
-                                <p className="card-text small text-muted mb-2">
-                                    {course.professor} | {course.credit}학점<br/>
-                                    {course.timeSlots}
-                                </p>
-                                <div className="d-flex gap-1">
-                                    <button 
-                                        className="btn btn-sm btn-primary flex-grow-1"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            addToTimetable(course);
-                                        }}
-                                    >
-                                        🔼 올리기
-                                    </button>
-                                    <button 
-                                        className="btn btn-sm btn-outline-danger"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleDelete(course, 'cart');
-                                        }}
-                                    >
-                                        🗑️
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    ))}
+          {cartCourses.length === 0 ? (
+            <p className="text-center text-muted m-0">장바구니가 비어있습니다.</p>
+          ) : (
+            <div className="d-flex flex-wrap gap-3">
+              {cartCourses.map(course => (
+                <div key={course.uniqueId} className="card border-0 shadow-sm" style={{ width: '250px' }}>
+                  <div
+                    className="card-body p-3"
+                    style={{ cursor: "pointer" }}
+                    onClick={(e) => {
+                      if (e.target.tagName !== "BUTTON") openDetailModal(course);
+                    }}
+                  >
+                    <h6 className="card-title fw-bold text-truncate">{course.courseName}</h6>
+                    <p className="card-text small text-muted mb-2">
+                      {course.professor} | {course.credit}학점<br />
+                      {course.timeSlots}
+                    </p>
+                    <div className="d-flex gap-1">
+                      <button
+                        className="btn btn-sm btn-primary flex-grow-1"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          addToTimetable(course);
+                        }}
+                      >
+                        🔼 올리기
+                      </button>
+                      <button
+                        className="btn btn-sm btn-outline-danger"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDelete(course, 'cart');
+                        }}
+                      >
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
                 </div>
-            )}
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
@@ -425,45 +425,45 @@ export default function CourseEdit() {
               <div className="modal-body">
                 <h4>{editingCourse.courseName}</h4>
                 <p className="text-muted mb-4">
-                    {editingCourse.professor} | {editingCourse.credit}학점 | {editingCourse.classRoom}<br/>
-                    시간: {editingCourse.timeSlots}
+                  {editingCourse.professor} | {editingCourse.credit}학점 | {editingCourse.classRoom}<br />
+                  시간: {editingCourse.timeSlots}
                 </p>
 
                 <div className="mb-3">
                   <label className="form-label">📝 메모</label>
-                  <textarea 
-                    className="form-control" 
-                    rows="3" 
-                    value={editMemo} 
+                  <textarea
+                    className="form-control"
+                    rows="3"
+                    value={editMemo}
                     onChange={(e) => setEditMemo(e.target.value)}
                     placeholder="이 강의에 대한 메모를 남기세요."
                   ></textarea>
                 </div>
                 <div className="mb-3">
                   <label className="form-label">⭐ 나만의 별점</label>
-                  <input 
-                    type="number" 
-                    className="form-control" 
-                    min="0" max="5" 
-                    value={editRating} 
-                    onChange={(e) => setEditRating(e.target.value)} 
+                  <input
+                    type="number"
+                    className="form-control"
+                    min="0" max="5"
+                    value={editRating}
+                    onChange={(e) => setEditRating(e.target.value)}
                   />
                 </div>
               </div>
               <div className="modal-footer d-flex justify-content-between">
-                <button 
-                    className="btn btn-danger" 
-                    onClick={() => {
-                        const isInTable = registeredCourses.some(c => c.uniqueId === editingCourse.uniqueId);
-                        handleDelete(editingCourse, isInTable ? 'timetable' : 'cart');
-                        setShowModal(false);
-                    }}
+                <button
+                  className="btn btn-danger"
+                  onClick={() => {
+                    const isInTable = registeredCourses.some(c => c.uniqueId === editingCourse.uniqueId);
+                    handleDelete(editingCourse, isInTable ? 'timetable' : 'cart');
+                    setShowModal(false);
+                  }}
                 >
-                    삭제하기
+                  삭제하기
                 </button>
                 <div>
-                    <button className="btn btn-secondary me-2" onClick={() => setShowModal(false)}>취소</button>
-                    <button className="btn btn-success" onClick={handleUpdateCourse}>수정 저장</button>
+                  <button className="btn btn-secondary me-2" onClick={() => setShowModal(false)}>취소</button>
+                  <button className="btn btn-success" onClick={handleUpdateCourse}>수정 저장</button>
                 </div>
               </div>
             </div>
