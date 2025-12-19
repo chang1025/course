@@ -38,7 +38,7 @@ export default function Login() {
         alert("로그인되었습니다");
 
         // 5. 메인 페이지로 이동
-        navigate("/list");
+        navigate("/home");
       } else {
         setError("존재하지 않는 학번입니다. (데이터를 확인해주세요)");
       }
